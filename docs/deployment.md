@@ -76,4 +76,4 @@ docker compose --env-file .env.docker run --rm -v "${PWD}/.env.member:/app/.env.
 | 通知停止更新           | 单独检查 Worker 健康、进程日志、Outbox 死信；API 成功不代表 Worker 正常         |
 | 第二次 seed 没重置数据 | 这是幂等初始化；需要新演示环境时使用新数据库，不手工删除审计与已发布版本        |
 
-本地 Windows 的应用、数据库和初始化命令已实测。Docker 启动另有 CI 检查，须以对应提交的 Actions 结果为准；不要将配置文件存在等同于部署验证成功。
+本地 Windows 的应用、数据库和初始化命令已实测。首版代码的 Docker 构建启动、Linux 全套测试及 Windows 冷启动检查均已通过 [远程 CI](https://github.com/davidZhang666-bin/FlowForge/actions/runs/39894492719)。现有数据库需使用 UTF-8；本地初始化和隔离测试显式指定编码，避免英文 Windows 默认 WIN1252 无法存储中文。

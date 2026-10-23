@@ -18,4 +18,14 @@
 
 数据库测试包含并发幂等、或签竞争、会签竞争后重试、撤回/审批竞争、跨企业与数据范围、通知重投去重、投递故障回滚/死信恢复、管理审计原子回滚及不可变约束。详见 testing.md。
 
-本机没有 Docker，容器运行和 Linux 环境由 GitHub Actions 中的独立任务验证。远程结果请查看仓库 Actions 对应提交；本记录中的本地结果不代表所有 CI 任务已成功。未进行容量压测、外部 SSO/邮件集成或正式生产验收。
+编译产物另外使用真实 Chromium 验证：编译后的 NestJS API、生产前端登录、工作台及流程设计器均正常，没有页面运行错误。初始化冒烟使用独立的非超级用户迁移所有者，验证 FORCE RLS 下的租户上下文和成员创建。
+
+## 远程验证
+
+[GitHub Actions 运行 39894492719](https://github.com/davidZhang666-bin/FlowForge/actions/runs/39894492719) 已全部成功，对应代码提交 `a34b9aebdf5e21bda2a305cc9eade3b7ab92bb0c`：
+
+- Linux：格式、Lint、类型、35 项单元测试与覆盖率、构建、依赖审计、25 项集成测试、非超级用户初始化冒烟、9 项 Chromium 测试。
+- Windows：安装、类型检查、全新可移植 PostgreSQL 初始化、25 项集成测试和正常停止。
+- Docker：完整多阶段镜像构建，Compose 数据库迁移、API/Worker 健康等待、Web 启动、健康与 OpenAPI HTTP 请求成功。
+
+Windows 冷启动通过 pg_ctl 使用受限进程令牌，集群与隔离测试数据库显式使用 UTF-8，不依赖宿主机语言和默认编码。最终文档提交没有改变经过上述验证的代码。未进行容量压测、外部 SSO/邮件集成或正式生产验收。

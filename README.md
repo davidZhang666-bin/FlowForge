@@ -10,7 +10,7 @@
 
 ## 本地启动
 
-需要 **Node.js 24 LTS（24.11+）和 pnpm 11.5.0**。本地开发不需要 Docker，首次安装会下载可移植 PostgreSQL 18 二进制。Windows x64 已实测。
+需要 **Node.js 24 LTS（24.11+）和 pnpm 11.5.0**。本地开发不需要 Docker，首次安装会下载可移植 PostgreSQL 18 二进制。Windows x64、Linux 全套 CI 和 Docker Compose 启动均已验证，详见 [验证记录](docs/validation.md)。
 
 ```sh
 git clone https://github.com/davidZhang666-bin/FlowForge.git
