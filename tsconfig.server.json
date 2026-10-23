@@ -1,0 +1,6 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "module": "NodeNext", "moduleResolution": "NodeNext", "rootDir": ".", "outDir": "dist", "declaration": true, "sourceMap": true },
+  "include": ["apps/api/src", "apps/worker/src", "packages"],
+  "exclude": ["**/*.test.ts", "node_modules"]
+}
