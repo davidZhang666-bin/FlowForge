@@ -4,6 +4,7 @@ import { roles, scopes, type Actor } from '../../../packages/contracts/src/index
 import { Database } from '../../../packages/data/src/index.js';
 import { tenantMembers } from '../../../packages/data/src/members.js';
 import { recordManagement } from '../../../packages/data/src/management.js';
+import { instanceScope } from './access.js';
 
 @Injectable()
 export class OrganizationService {
@@ -53,13 +54,20 @@ export class OrganizationService {
     });
   }
   async notifications(actor: Actor): Promise<unknown> {
-    return this.db.tenant(actor.tenantId, (tx) =>
-      tx.notification.findMany({
-        where: { userId: actor.userId },
+    return this.db.tenant(actor.tenantId, async (tx) => {
+      const instances = await tx.processInstance.findMany({
+        where: await instanceScope(tx, actor),
+        select: { id: true },
+      });
+      return tx.notification.findMany({
+        where: {
+          userId: actor.userId,
+          instanceId: { in: instances.map((instance) => instance.id) },
+        },
         orderBy: { createdAt: 'desc' },
         take: 50,
-      }),
-    );
+      });
+    });
   }
   async read(actor: Actor, id: string): Promise<unknown> {
     z.string().uuid().parse(id);

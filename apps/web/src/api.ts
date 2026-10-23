@@ -13,7 +13,13 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     credentials: 'same-origin',
     headers: {
       'Content-Type': 'application/json',
-      'x-csrf-token': sessionStorage.getItem('ff_csrf') ?? '',
+      'x-csrf-token':
+        document.cookie
+          .split('; ')
+          .find((cookie) => cookie.startsWith('ff_csrf='))
+          ?.slice(8) ??
+        sessionStorage.getItem('ff_csrf') ??
+        '',
       ...init.headers,
     },
   });

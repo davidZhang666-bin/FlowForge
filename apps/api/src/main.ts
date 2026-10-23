@@ -28,11 +28,9 @@ class AppModule {}
 export async function createApp() {
   const app = await NestFactory.create(AppModule, {
     bodyParser: false,
-    logger: ['error', 'warn', 'log'],
+    logger: process.env.FLOWFORGE_TEST === '1' ? false : ['error', 'warn', 'log'],
   });
   app.use(helmet());
-  app.use(expressJson({ limit: '128kb' }));
-  app.use(cookieParser());
   const origin = process.env.WEB_ORIGIN ?? 'http://localhost:5173';
   app.enableCors({ origin, credentials: true });
   app.use(
@@ -53,6 +51,8 @@ export async function createApp() {
       next();
     },
   );
+  app.use(expressJson({ limit: '128kb' }));
+  app.use(cookieParser());
   app.useGlobalFilters(new ErrorFilter());
   app.enableShutdownHooks();
   return app;

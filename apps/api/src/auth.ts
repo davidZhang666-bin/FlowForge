@@ -56,6 +56,13 @@ export class AuthService {
       maxAge: 8 * 3600000,
       path: '/',
     });
+    res.cookie('ff_csrf', csrfToken, {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 8 * 3600000,
+      path: '/',
+    });
     return { csrfToken };
   }
   async identity(
@@ -123,5 +130,6 @@ export class AuthService {
     const { tokenHash } = await this.identity(req, true);
     await this.db.client.session.delete({ where: { tokenHash } });
     res.clearCookie('ff_session', { path: '/' });
+    res.clearCookie('ff_csrf', { path: '/' });
   }
 }

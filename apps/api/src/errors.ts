@@ -25,6 +25,15 @@ export class ErrorFilter implements ExceptionFilter {
       status = 400;
       code = 'VALIDATION_ERROR';
       message = error.issues.map((i) => `${i.path.join('.')}: ${i.message}`);
+    } else if (
+      error &&
+      typeof error === 'object' &&
+      'status' in error &&
+      [400, 413].includes(Number(error.status))
+    ) {
+      status = Number(error.status);
+      code = 'BODY_PARSE_ERROR';
+      message = status === 413 ? '请求内容超过大小限制' : '请求 JSON 格式不正确';
     } else if (error instanceof DomainError) {
       status =
         error.code === 'FORBIDDEN'
