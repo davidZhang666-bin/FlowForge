@@ -17,6 +17,7 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:provision": "tsx scripts/provision.ts",
     "db:bootstrap": "tsx scripts/bootstrap.ts",
+    "db:member": "tsx scripts/member.ts",
     "db:generate": "prisma generate",
     "build": "tsc -p tsconfig.server.json && vite build --config apps/web/vite.config.ts",
     "start:api": "node dist/apps/api/src/main.js",
@@ -29,6 +30,7 @@
     "test:coverage": "vitest run --project unit --coverage",
     "test:integration": "tsx scripts/integration.ts",
     "test:e2e": "tsx scripts/integration.ts --e2e",
+    "test:bootstrap": "tsx scripts/bootstrap-smoke.ts",
     "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
   },
   "dependencies": {
