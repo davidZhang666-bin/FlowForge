@@ -22,7 +22,18 @@ const env = {
   ...process.env,
   DATABASE_ADMIN_URL: testAdmin.toString(),
   DATABASE_URL: testRuntime.toString(),
-  FLOWFORGE_TEST: '1',
+  FLOWFORGE_TEST: process.argv.includes('--e2e') ? '0' : '1',
+  ...(process.argv.includes('--e2e')
+    ? {
+        PORT: '3101',
+        WEB_PORT: '5174',
+        WEB_ORIGIN: 'http://localhost:5174',
+        VITE_API_TARGET: 'http://127.0.0.1:3101',
+        PLAYWRIGHT_BASE_URL: 'http://localhost:5174',
+        E2E_ISOLATED: '1',
+        DEMO_PASSWORD: 'FlowForge2026!',
+      }
+    : {}),
 };
 async function run(args: string[]): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -44,12 +55,18 @@ try {
     `GRANT USAGE ON SCHEMA public TO ${role}; GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ${role}; REVOKE UPDATE, DELETE ON flow_versions, domain_events, audit_logs FROM ${role}; REVOKE ALL ON _prisma_migrations FROM ${role}`,
   );
   await grants.end();
-  process.exitCode = await run([
-    'node_modules/vitest/vitest.mjs',
-    'run',
-    '--project',
-    'integration',
-  ]);
+  if (process.argv.includes('--e2e')) {
+    const seeded = await run(['--import', 'tsx', 'scripts/seed.ts']);
+    if (seeded !== 0) throw new Error('E2E fixtures could not be created');
+    process.exitCode = await run(['node_modules/@playwright/test/cli.js', 'test']);
+  } else {
+    process.exitCode = await run([
+      'node_modules/vitest/vitest.mjs',
+      'run',
+      '--project',
+      'integration',
+    ]);
+  }
 } finally {
   // Names are generated locally from hexadecimal bytes; never remove a user-named database.
   await control.query(`DROP DATABASE IF EXISTS ${name} WITH (FORCE)`);

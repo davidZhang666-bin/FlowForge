@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 const password = process.env.DEMO_PASSWORD ?? 'FlowForge2026!';
 async function login(page: Page, role: string) {
   await page.goto('/');
+  await expect(page.locator('.login-form, .app-layout')).toBeVisible();
   const logout = page.getByRole('button', { name: '退出登录' });
   if (await logout.isVisible()) {
     await logout.click();
