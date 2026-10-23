@@ -41,6 +41,7 @@ test('dashboard renders real records and adapts to a narrow viewport', async ({ 
     true,
   );
   expect(errors).toEqual([]);
+  await page.screenshot({ path: 'test-results/dashboard-mobile.png', fullPage: true });
 });
 test('an applicant submits and a manager approves along the actual path', async ({ page }) => {
   await login(page, 'employee');
@@ -51,6 +52,7 @@ test('an applicant submits and a manager approves along the actual path', async 
   await page.getByRole('button', { name: '同意申请', exact: true }).click();
   await status(page, '已完成');
   await expect(page.locator('.react-flow__edge.animated')).not.toHaveCount(0);
+  await page.screenshot({ path: 'test-results/execution-path.png', fullPage: true });
 });
 test('countersign waits for both financial reviewers', async ({ page }) => {
   await login(page, 'employee');
@@ -85,7 +87,10 @@ test('return and resubmit preserve the version and show separate rounds', async 
   await page.getByRole('button', { name: '重新提交', exact: true }).click();
   await status(page, '第 2 轮');
   await status(page, '流程 v1');
-  await page.getByRole('combobox', { name: '查看审批轮次' }).click();
+  await page
+    .locator('.ant-select')
+    .filter({ has: page.getByRole('combobox', { name: '查看审批轮次' }) })
+    .click();
   await page.getByText('第 1 轮执行', { exact: true }).click();
   await expect(page.locator('.event-panel')).toContainText('退回申请人');
 });
@@ -128,6 +133,7 @@ test('publishing a changed branch keeps old requests on their original version',
   await page.getByLabel('分支名称').first().fill('金额 ≥ ¥90,000');
   await page.getByRole('button', { name: '发布新版本', exact: true }).click();
   await expect(page.getByText('当前发布 v2', { exact: false })).toBeVisible();
+  await page.screenshot({ path: 'test-results/workflow-designer.png', fullPage: true });
   await login(page, 'employee');
   const fresh = await submit(page, 'PURCHASE', 'new version purchase', '20000');
   await status(page, '流程 v2');
@@ -154,14 +160,23 @@ test('dragged nodes persist in drafts and disconnected nodes block publication',
   await page.goto('/workflows');
   await page.getByRole('heading', { name: '费用报销流程', exact: true }).click();
   const node = page.locator('.react-flow__node').filter({ hasText: '部门负责人审批' });
+  await expect(node).toBeVisible();
+  const before = await node.getAttribute('style');
   const bounds = await node.boundingBox();
   expect(bounds).not.toBeNull();
   await page.mouse.move(bounds!.x + bounds!.width / 2, bounds!.y + 25);
   await page.mouse.down();
   await page.mouse.move(bounds!.x + bounds!.width / 2 + 80, bounds!.y + 65, { steps: 10 });
   await page.mouse.up();
+  await expect.poll(() => node.getAttribute('style')).not.toBe(before);
   await page.getByRole('button', { name: '保存草稿', exact: true }).click();
   await expect(page.getByText('草稿已保存', { exact: true })).toBeVisible();
+  const savedPosition = await node.evaluate((element) => (element as HTMLElement).style.transform);
+  await page.reload();
+  await expect(node).toBeVisible();
+  await expect
+    .poll(() => node.evaluate((element) => (element as HTMLElement).style.transform))
+    .toBe(savedPosition);
   const originalCount = await page.locator('.react-flow__node').count();
   await page
     .getByRole('button', { name: '审批节点', exact: true })
@@ -172,4 +187,19 @@ test('dragged nodes persist in drafts and disconnected nodes block publication',
   await expect(page.getByText('草稿已保存', { exact: true })).toBeVisible();
   await page.reload();
   await expect(page.locator('.react-flow__node')).toHaveCount(originalCount + 1);
+});
+
+test('a new tab retains authenticated mutation access through the CSRF cookie', async ({
+  page,
+  context,
+}) => {
+  await login(page, 'employee');
+  const other = await context.newPage();
+  try {
+    await submit(other, 'LEAVE', 'new tab leave');
+    await status(other, '进行中');
+    await expect(other.locator('.instance-summary')).toContainText('流程 v1');
+  } finally {
+    await other.close();
+  }
 });

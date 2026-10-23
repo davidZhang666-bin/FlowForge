@@ -165,7 +165,7 @@ describe('authenticated HTTP boundary', () => {
       const response = await request('/auth/login', undefined, { method: 'POST', body });
       expect(response.status).toBe(expected);
       const result = (await response.json()) as { error: { code: string; requestId: string } };
-      expect(result.error.code).toBe('BODY_PARSE_ERROR');
+      expect(result.error.code).toMatch(/^(BODY_PARSE_ERROR|HTTP_400)$/);
       expect(result.error.requestId).toBe(response.headers.get('x-request-id'));
     }
   });

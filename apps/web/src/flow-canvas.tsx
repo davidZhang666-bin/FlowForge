@@ -1,4 +1,4 @@
-import { useMemo, type DragEvent } from 'react';
+import { useEffect, useMemo, type DragEvent } from 'react';
 import {
   Background,
   BackgroundVariant,
@@ -10,6 +10,8 @@ import {
   ReactFlow,
   ReactFlowProvider,
   useReactFlow,
+  useNodesState,
+  type Node,
   type Connection,
   type NodeProps,
 } from '@xyflow/react';
@@ -63,6 +65,8 @@ function WorkflowNode({ data }: NodeProps) {
   );
 }
 const nodeTypes = { workflow: WorkflowNode };
+const noExecutions: Execution[] = [];
+const noEdges: string[] = [];
 interface Props {
   graph: FlowGraph;
   onChange?: (graph: FlowGraph) => void;
@@ -77,17 +81,21 @@ function Canvas({
   onChange,
   onSelect,
   selectedId,
-  executions = [],
-  visitedEdges = [],
+  executions = noExecutions,
+  visitedEdges = noEdges,
   onAdd,
 }: Props) {
   const instance = useReactFlow();
-  const nodes = useMemo(
-    () =>
-      graph.nodes.map((node) => ({
+  const [nodes, setNodes, changeNodes] = useNodesState<Node>([]);
+  useEffect(() => {
+    setNodes((current) => {
+      const previous = new Map(current.map((node) => [node.id, node]));
+      return graph.nodes.map((node) => ({
+        ...previous.get(node.id),
         id: node.id,
         type: 'workflow',
         position: node.position,
+        deletable: !!onChange && !['start', 'end'].includes(node.kind),
         selected: node.id === selectedId,
         data: {
           label: node.name,
@@ -95,9 +103,9 @@ function Canvas({
           strategy: node.kind === 'approval' ? node.strategy : '',
           state: executions.find((e) => e.nodeId === node.id)?.status ?? 'idle',
         },
-      })),
-    [graph.nodes, selectedId, executions],
-  );
+      }));
+    });
+  }, [graph.nodes, selectedId, executions, onChange, setNodes]);
   const edges = useMemo(
     () =>
       graph.edges.map((edge) => {
@@ -149,16 +157,23 @@ function Canvas({
       nodeTypes={nodeTypes}
       onConnect={connect}
       onNodesChange={(changes) => {
+        changeNodes(changes);
         const positions = changes.filter((c) => c.type === 'position' && c.position);
-        if (onChange && positions.length)
+        const removed = new Set(changes.filter((c) => c.type === 'remove').map((c) => c.id));
+        if (onChange && (positions.length || removed.size))
           onChange({
             ...graph,
-            nodes: graph.nodes.map((n) => {
-              const change = positions.find((c) => c.type === 'position' && c.id === n.id);
-              return change?.type === 'position' && change.position
-                ? { ...n, position: change.position }
-                : n;
-            }),
+            edges: graph.edges.filter(
+              (edge) => !removed.has(edge.source) && !removed.has(edge.target),
+            ),
+            nodes: graph.nodes
+              .filter((n) => !removed.has(n.id))
+              .map((n) => {
+                const change = positions.find((c) => c.type === 'position' && c.id === n.id);
+                return change?.type === 'position' && change.position
+                  ? { ...n, position: change.position }
+                  : n;
+              }),
           });
       }}
       onEdgesChange={(changes) => {
