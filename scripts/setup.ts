@@ -69,13 +69,9 @@ if (!role.rowCount)
     `CREATE ROLE ff_app LOGIN PASSWORD '${password}' NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS`,
   );
 await control.end();
-for (const args of [
-  ['exec', 'prisma', 'generate'],
-  ['exec', 'prisma', 'migrate', 'deploy'],
-]) {
-  const result = spawnSync(process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm', args, {
+for (const args of [['generate'], ['migrate', 'deploy']]) {
+  const result = spawnSync(process.execPath, ['node_modules/prisma/build/index.js', ...args], {
     stdio: 'inherit',
-    shell: process.platform === 'win32',
   });
   if (result.status !== 0) process.exit(result.status ?? 1);
 }

@@ -8,9 +8,11 @@
     "node": ">=24.11 <25"
   },
   "scripts": {
+    "postinstall": "prisma generate",
     "dev": "tsx scripts/dev.ts",
     "setup": "tsx scripts/setup.ts",
     "db:start": "tsx scripts/local-db.ts",
+    "db:stop": "tsx scripts/local-db.ts --stop",
     "db:migrate": "prisma migrate deploy",
     "db:seed": "tsx scripts/seed.ts",
     "db:generate": "prisma generate",

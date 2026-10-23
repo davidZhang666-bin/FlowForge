@@ -25,4 +25,7 @@ export class Database {
   async close(): Promise<void> {
     await this.client.$disconnect();
   }
+  async onModuleDestroy(): Promise<void> {
+    await this.close();
+  }
 }

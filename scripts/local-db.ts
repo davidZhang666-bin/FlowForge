@@ -2,8 +2,19 @@ import 'dotenv/config';
 import EmbeddedPostgres from 'embedded-postgres';
 import { resolve } from 'node:path';
 import { existsSync } from 'node:fs';
+import { stopLocalDatabase } from './postgres-control.js';
 
-const db = new EmbeddedPostgres({
+if (process.argv.includes('--stop')) {
+  await stopLocalDatabase();
+  process.exit(0);
+}
+class ManagedPostgres extends EmbeddedPostgres {
+  override async stop(): Promise<void> {
+    await stopLocalDatabase();
+  }
+}
+
+const db = new ManagedPostgres({
   databaseDir: resolve('.local/postgres'),
   user: 'postgres',
   password: process.env.DB_ADMIN_PASSWORD ?? '',
@@ -15,10 +26,6 @@ const db = new EmbeddedPostgres({
   onError: (message) => process.stderr.write(`${String(message)}\n`),
 });
 if (!process.env.DB_ADMIN_PASSWORD) throw new Error('DB_ADMIN_PASSWORD missing; run pnpm setup');
-if (process.argv.includes('--stop')) {
-  await db.stop();
-  process.exit(0);
-}
 if (!existsSync(resolve('.local/postgres/PG_VERSION'))) await db.initialise();
 await db.start();
 console.log('Local PostgreSQL listening on loopback.');
@@ -35,4 +42,6 @@ process.on('SIGINT', () => {
 process.on('SIGTERM', () => {
   void stop();
 });
-setInterval(() => {}, 60000);
+setInterval(() => {
+  if (!existsSync(resolve('.local/postgres/postmaster.pid'))) process.exit(0);
+}, 2000);
