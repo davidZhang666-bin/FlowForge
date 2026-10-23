@@ -6,9 +6,13 @@ import { WorkflowService } from './workflows.js';
 import { ProcessService } from './processes.js';
 import { OrganizationService } from './organization.js';
 import { Database } from '../../../packages/data/src/index.js';
+import { openApiDocument } from '../../../packages/contracts/src/openapi.js';
 
 @Controller()
 export class ApiController {
+  @Get('api/v1/openapi.json') openapi() {
+    return openApiDocument();
+  }
   constructor(
     @Inject(AuthService) private readonly auth: AuthService,
     @Inject(WorkflowService) private readonly workflows: WorkflowService,
