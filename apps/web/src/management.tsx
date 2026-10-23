@@ -149,6 +149,7 @@ export function OrganizationPage() {
         />
       </section>
       <Modal
+        forceRender
         open={!!selected}
         title="编辑成员权限"
         onCancel={() => setSelected(undefined)}

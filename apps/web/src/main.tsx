@@ -1,4 +1,5 @@
 import React from 'react';
+import '@ant-design/v5-patch-for-react-19';
 import ReactDOM from 'react-dom/client';
 import { App as AntApp, ConfigProvider } from 'antd';
 import zhCN from 'antd/locale/zh_CN';

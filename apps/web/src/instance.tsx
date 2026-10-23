@@ -502,6 +502,7 @@ export function InstancePage() {
         </aside>
       </div>
       <Modal
+        forceRender
         open={!!modal}
         title={modal ? actionLabels[modal.action] : ''}
         onCancel={() => setModal(undefined)}
