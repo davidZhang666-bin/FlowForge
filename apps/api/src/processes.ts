@@ -5,15 +5,11 @@ import type { Prisma } from '@prisma/client';
 import { Database, json, type Transaction } from '../../../packages/data/src/index.js';
 import { saveTransition } from '../../../packages/data/src/transitions.js';
 import { canonical, digest } from '../../../packages/data/src/security.js';
-import { commandSchema, flowSchema, requestSchema, type Actor, type Member } from '../../../packages/contracts/src/index.js';
+import { commandSchema, flowSchema, requestSchema, type Actor } from '../../../packages/contracts/src/index.js';
+import { tenantMembers } from '../../../packages/data/src/members.js';
 import { executeCommand, startProcess, type ProcessState } from '../../../packages/core/src/index.js';
 import { instanceScope } from './access.js';
 
-export async function tenantMembers(tx: Transaction): Promise<Member[]> {
-  const memberships = await tx.membership.findMany();
-  const users = await tx.user.findMany({ where: { id: { in: memberships.map(m => m.userId) } }, select: { id: true, name: true, active: true } });
-  return memberships.map(m => ({ userId: m.userId, departmentId: m.departmentId, role: m.role as Member['role'], name: users.find(u => u.id === m.userId)?.name ?? '未知成员', active: m.active && !!users.find(u => u.id === m.userId)?.active }));
-}
 @Injectable()
 export class ProcessService {
   constructor(private readonly db: Database) {}
