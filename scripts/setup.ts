@@ -52,7 +52,10 @@ try {
     }
   }
   if (!connected) {
-    let tail = readFileSync('.local/postgres.log', 'utf8').slice(-6000);
+    let tail = ['.local/postgres.log', '.local/postgres-server.log']
+      .filter(existsSync)
+      .map((path) => readFileSync(path, 'utf8').slice(-4000))
+      .join('\n');
     for (const secret of [process.env.DB_ADMIN_PASSWORD, process.env.DB_APP_PASSWORD])
       if (secret) tail = tail.replaceAll(secret, '[redacted]');
     throw new Error(`Local PostgreSQL did not start; recent database log:\n${tail}`);

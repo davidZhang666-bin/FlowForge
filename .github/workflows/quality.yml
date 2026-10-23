@@ -76,7 +76,7 @@ jobs:
         if: failure()
         with:
           name: windows-postgres-log
-          path: .local/postgres.log
+          path: .local/postgres*.log
   containers:
     runs-on: ubuntu-latest
     timeout-minutes: 25

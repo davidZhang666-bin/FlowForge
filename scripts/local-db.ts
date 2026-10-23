@@ -2,7 +2,7 @@ import 'dotenv/config';
 import EmbeddedPostgres from 'embedded-postgres';
 import { resolve } from 'node:path';
 import { existsSync } from 'node:fs';
-import { stopLocalDatabase } from './postgres-control.js';
+import { startWindowsDatabase, stopLocalDatabase } from './postgres-control.js';
 
 if (process.argv.includes('--stop')) {
   await stopLocalDatabase();
@@ -27,7 +27,8 @@ const db = new ManagedPostgres({
 });
 if (!process.env.DB_ADMIN_PASSWORD) throw new Error('DB_ADMIN_PASSWORD missing; run pnpm setup');
 if (!existsSync(resolve('.local/postgres/PG_VERSION'))) await db.initialise();
-await db.start();
+if (process.platform === 'win32') await startWindowsDatabase(Number(process.env.DB_PORT ?? 55432));
+else await db.start();
 console.log('Local PostgreSQL listening on loopback.');
 let stopping = false;
 async function stop(): Promise<void> {
