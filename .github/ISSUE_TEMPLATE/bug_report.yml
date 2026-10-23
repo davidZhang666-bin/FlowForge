@@ -1,0 +1,18 @@
+name: 缺陷报告
+description: 使用合成数据描述可复现的问题；安全漏洞请遵循 SECURITY.md。
+body:
+  - type: textarea
+    attributes:
+      label: 复现步骤
+      description: 提供提交号、运行方式、角色与最小步骤，不包含密码或真实企业信息。
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 预期与实际行为
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 验证和日志
+      description: 附脱敏截图、请求关联 ID 或错误信息。
