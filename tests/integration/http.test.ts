@@ -157,6 +157,35 @@ describe('authenticated HTTP boundary', () => {
     );
     expect((await request('/session', session)).status).toBe(401);
   });
+  it('returns bounded parse errors with correlation IDs', async () => {
+    for (const [body, expected] of [
+      ['{bad', 400],
+      [JSON.stringify({ value: 'x'.repeat(140000) }), 413],
+    ] as const) {
+      const response = await request('/auth/login', undefined, { method: 'POST', body });
+      expect(response.status).toBe(expected);
+      const result = (await response.json()) as { error: { code: string; requestId: string } };
+      expect(result.error.code).toBe('BODY_PARSE_ERROR');
+      expect(result.error.requestId).toBe(response.headers.get('x-request-id'));
+    }
+  });
+  it('exposes a readable CSRF cookie and restricts management audit', async () => {
+    const response = await request('/auth/login', undefined, {
+      method: 'POST',
+      body: JSON.stringify({ email: f.emails.admin, password: f.password }),
+    });
+    const { csrfToken } = (await response.json()) as { csrfToken: string };
+    const csrfCookie = response.headers
+      .getSetCookie()
+      .find((cookie) => cookie.startsWith('ff_csrf='));
+    expect(csrfCookie).toContain(`ff_csrf=${csrfToken}`);
+    expect(csrfCookie).toContain('SameSite=Strict');
+    expect(csrfCookie).not.toContain('HttpOnly');
+    const admin = { cookie: response.headers.getSetCookie()[0]!.split(';')[0]!, csrf: csrfToken };
+    expect((await request(`/tenants/${f.tenantId}/audit`, admin)).status).toBe(200);
+    const employee = await login(f.emails.employee, f.password);
+    expect((await request(`/tenants/${f.tenantId}/audit`, employee)).status).toBe(403);
+  });
   it('throttles repeated incorrect credentials', async () => {
     let status = 0;
     for (let i = 0; i < 11; i++)
