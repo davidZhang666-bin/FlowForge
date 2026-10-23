@@ -1,0 +1,184 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+}
+
+model Tenant {
+  id String @id @default(uuid()) @db.Uuid
+  name String
+  createdAt DateTime @default(now())
+  @@map("tenants")
+}
+model User {
+  id String @id @default(uuid()) @db.Uuid
+  email String @unique
+  name String
+  passwordHash String
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+  @@map("users")
+}
+model Session {
+  tokenHash String @id
+  csrfHash String
+  userId String @db.Uuid
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+model LoginAttempt {
+  key String @id
+  attempts Int @default(0)
+  windowStart DateTime @default(now())
+  @@map("login_attempts")
+}
+model Department {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  name String
+  parentId String? @db.Uuid
+  @@unique([tenantId, id])
+  @@unique([tenantId, name])
+  @@map("departments")
+}
+model Membership {
+  tenantId String @db.Uuid
+  userId String @db.Uuid
+  departmentId String @db.Uuid
+  role String
+  scope String @default("SELF")
+  active Boolean @default(true)
+  @@id([tenantId, userId])
+  @@index([tenantId, departmentId])
+  @@map("memberships")
+}
+model FlowDefinition {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  name String
+  type String
+  draft Json
+  revision Int @default(0)
+  latestVersion Int @default(0)
+  updatedAt DateTime @updatedAt
+  @@unique([tenantId, id])
+  @@unique([tenantId, type])
+  @@map("flow_definitions")
+}
+model FlowVersion {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  definitionId String @db.Uuid
+  number Int
+  graph Json
+  publishedBy String @db.Uuid
+  publishedAt DateTime @default(now())
+  @@unique([tenantId, id])
+  @@unique([tenantId, definitionId, number])
+  @@map("flow_versions")
+}
+model ProcessInstance {
+  id String @id @db.Uuid
+  tenantId String @db.Uuid
+  versionId String @db.Uuid
+  applicantId String @db.Uuid
+  departmentId String @db.Uuid
+  title String
+  type String
+  status String
+  revision Int
+  state Json
+  linkedFrom String? @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([tenantId, id])
+  @@index([tenantId, status, updatedAt])
+  @@index([tenantId, applicantId])
+  @@map("process_instances")
+}
+model TaskIndex {
+  id String @id @db.Uuid
+  tenantId String @db.Uuid
+  instanceId String @db.Uuid
+  nodeId String
+  round Int
+  kind String
+  assigneeId String? @db.Uuid
+  status String
+  dueAt DateTime
+  escalated Boolean @default(false)
+  @@index([tenantId, assigneeId, status])
+  @@index([tenantId, instanceId])
+  @@map("task_index")
+}
+model Participant {
+  tenantId String @db.Uuid
+  instanceId String @db.Uuid
+  userId String @db.Uuid
+  @@id([tenantId, instanceId, userId])
+  @@map("participants")
+}
+model DomainEvent {
+  id String @id @db.Uuid
+  tenantId String @db.Uuid
+  instanceId String @db.Uuid
+  sequence Int
+  type String
+  actorId String @db.Uuid
+  nodeId String?
+  round Int
+  payload Json
+  occurredAt DateTime
+  @@unique([tenantId, instanceId, sequence])
+  @@unique([tenantId, id])
+  @@map("domain_events")
+}
+model Outbox {
+  eventId String @id @db.Uuid
+  tenantId String @db.Uuid
+  attempts Int @default(0)
+  availableAt DateTime @default(now())
+  processedAt DateTime?
+  failedAt DateTime?
+  lastError String?
+  @@index([tenantId, processedAt, availableAt])
+  @@map("outbox")
+}
+model Notification {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  eventId String @db.Uuid
+  userId String @db.Uuid
+  instanceId String @db.Uuid
+  title String
+  readAt DateTime?
+  createdAt DateTime @default(now())
+  @@unique([tenantId, eventId, userId])
+  @@index([tenantId, userId, createdAt])
+  @@map("notifications")
+}
+model AuditLog {
+  id String @id @db.Uuid
+  tenantId String @db.Uuid
+  instanceId String @db.Uuid
+  actorId String @db.Uuid
+  action String
+  payload Json
+  occurredAt DateTime
+  @@index([tenantId, instanceId, occurredAt])
+  @@map("audit_logs")
+}
+model IdempotencyRecord {
+  tenantId String @db.Uuid
+  actorId String @db.Uuid
+  key String
+  requestHash String
+  response Json
+  createdAt DateTime @default(now())
+  @@id([tenantId, actorId, key])
+  @@map("idempotency_records")
+}
