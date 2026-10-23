@@ -4,7 +4,9 @@
   "version": "0.1.0",
   "type": "module",
   "packageManager": "pnpm@11.5.0",
-  "engines": { "node": ">=24.11 <25" },
+  "engines": {
+    "node": ">=24.11 <25"
+  },
   "scripts": {
     "dev": "tsx scripts/dev.ts",
     "setup": "tsx scripts/setup.ts",
@@ -36,6 +38,7 @@
     "antd": "5.29.3",
     "cookie-parser": "1.4.7",
     "dotenv": "17.2.3",
+    "express": "5.1.0",
     "helmet": "8.1.0",
     "pg": "8.23.1",
     "react": "19.2.0",

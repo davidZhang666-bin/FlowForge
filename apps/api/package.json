@@ -1,1 +1,5 @@
-{ "name": "@flowforge/api", "private": true, "type": "module" }
+{
+  "name": "@flowforge/api",
+  "private": true,
+  "type": "module"
+}

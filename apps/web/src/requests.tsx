@@ -1,29 +1,411 @@
 import { useState } from 'react';
-import { Alert, App as AntApp, Button, Form, Input, InputNumber, Select, Skeleton, Table } from 'antd';
+import {
+  Alert,
+  App as AntApp,
+  Button,
+  Form,
+  Input,
+  InputNumber,
+  Select,
+  Skeleton,
+  Table,
+} from 'antd';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { applicationTypes, typeLabels, type ApplicationType, type RequestData } from '../../../packages/contracts/src/index.js';
+import {
+  applicationTypes,
+  typeLabels,
+  type ApplicationType,
+  type RequestData,
+} from '../../../packages/contracts/src/index.js';
 import { useApp } from './shell.js';
 import { api, mutate, tenantPath } from './api.js';
 import { formatDate, Icon, PageTitle, Status, TypeTag } from './components.js';
 import type { Directory, Instance, Workflow } from './types.js';
 
 export function RequestList({ view }: { view: 'mine' | 'pending' | 'tickets' | 'escalated' }) {
-  const { tenant } = useApp(); const [page, setPage] = useState(1); const [search, setSearch] = useState(''); const [status, setStatus] = useState<string>();
-  const { data, error, isFetching } = useQuery({ queryKey: ['instances', tenant.id, view, page, search, status], queryFn: () => api<{ items: Instance[]; total: number }>(tenantPath(tenant.id, `/instances?${new URLSearchParams({ view, page: String(page), search, ...(status ? { status } : {}) })}`)), refetchInterval: 10000 });
-  const directory = useQuery({ queryKey: ['directory', tenant.id], queryFn: () => api<Directory>(tenantPath(tenant.id, '/directory')) });
-  const titles = { mine: ['我的申请', '跟进每一份申请的流转进度。'], pending: ['待我审批', '你参与的审批事项，等待你的下一步决定。'], tickets: ['工单中心', '从故障申报到解决验收，完整跟进服务进度。'], escalated: ['审批升级', '关注超时事项，协调团队及时处理。'] };
-  return <><PageTitle eyebrow={`WORKSPACE / ${view.toUpperCase()}`} title={titles[view][0]!} description={titles[view][1]!} action={<Link to={view === 'tickets' ? '/new?type=INCIDENT' : '/new'}><Button type="primary" icon={<Icon name="plus" size={16}/>}>{view === 'tickets' ? '新建故障工单' : '发起申请'}</Button></Link>}/><section className="panel list-panel"><div className="list-toolbar"><div className="list-toolbar-title"><span className="live-dot"/>全部事项 <span className="count-pill">{data?.total ?? 0}</span></div><div className="list-filters"><Select aria-label="筛选状态" allowClear placeholder="全部状态" value={status} onChange={value => { setStatus(value); setPage(1); }} style={{ width: 140 }} options={['RUNNING', 'RETURNED', 'BLOCKED', 'COMPLETED', 'REJECTED', 'WITHDRAWN'].map(value => ({ value, label: { RUNNING: '进行中', RETURNED: '待修改', BLOCKED: '异常待处理', COMPLETED: '已完成', REJECTED: '已拒绝', WITHDRAWN: '已撤回' }[value] }))}/><Input.Search aria-label="搜索申请" placeholder="搜索申请标题" allowClear onSearch={value => { setSearch(value); setPage(1); }} style={{ width: 250 }}/></div></div>{error ? <Alert type="error" message={error.message}/> : <Table rowKey="id" loading={isFetching} dataSource={data?.items} pagination={{ current: page, pageSize: 20, total: data?.total, onChange: setPage, showSizeChanger: false, showTotal: total => `共 ${total} 条事项` }} scroll={{ x: 850 }} columns={[{ title: '申请事项', dataIndex: 'title', render: (title: string, record: Instance) => <Link to={`/instances/${record.id}`} className="table-title"><span className={`item-symbol symbol-${record.type.toLowerCase()}`}><Icon name={record.type === 'INCIDENT' ? 'tool' : 'file'} size={18}/></span><span>{title}<small>{record.id.slice(0, 8).toUpperCase()}</small></span></Link> }, { title: '申请人', dataIndex: 'applicantId', width: 100, render: (id: string) => directory.data?.members.find(m => m.userId === id)?.name ?? '—' }, { title: '类型', dataIndex: 'type', width: 90, render: (type: ApplicationType) => <TypeTag type={type}/> }, { title: '状态', width: 130, render: (_: unknown, row: Instance) => <div><Status value={row.status}/>{row.type === 'INCIDENT' && row.state.tickets.at(-1) && row.status === 'RUNNING' && <small className="ticket-substatus">{({ ASSIGNED: '待认领', IN_PROGRESS: '处理中', RESOLVED: '待验收', CLOSED: '已验收', CANCELLED: '已取消' })[row.state.tickets.at(-1)!.status]}</small>}</div> }, { title: '流程版本', dataIndex: 'versionNumber', width: 100, render: (value: number) => <span className="version-chip">v{value}</span> }, { title: '提交时间', dataIndex: 'createdAt', width: 145, render: formatDate }, { title: '', key: 'action', width: 75, render: (_: unknown, row: Instance) => <Link to={`/instances/${row.id}`}>查看 ↗</Link> }]}/>}</section></>;
+  const { tenant } = useApp();
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState<string>();
+  const { data, error, isFetching } = useQuery({
+    queryKey: ['instances', tenant.id, view, page, search, status],
+    queryFn: () =>
+      api<{ items: Instance[]; total: number }>(
+        tenantPath(
+          tenant.id,
+          `/instances?${new URLSearchParams({ view, page: String(page), search, ...(status ? { status } : {}) })}`,
+        ),
+      ),
+    refetchInterval: 10000,
+  });
+  const directory = useQuery({
+    queryKey: ['directory', tenant.id],
+    queryFn: () => api<Directory>(tenantPath(tenant.id, '/directory')),
+  });
+  const titles = {
+    mine: ['我的申请', '跟进每一份申请的流转进度。'],
+    pending: ['待我审批', '你参与的审批事项，等待你的下一步决定。'],
+    tickets: ['工单中心', '从故障申报到解决验收，完整跟进服务进度。'],
+    escalated: ['审批升级', '关注超时事项，协调团队及时处理。'],
+  };
+  return (
+    <>
+      <PageTitle
+        eyebrow={`WORKSPACE / ${view.toUpperCase()}`}
+        title={titles[view][0]!}
+        description={titles[view][1]!}
+        action={
+          <Link to={view === 'tickets' ? '/new?type=INCIDENT' : '/new'}>
+            <Button type="primary" icon={<Icon name="plus" size={16} />}>
+              {view === 'tickets' ? '新建故障工单' : '发起申请'}
+            </Button>
+          </Link>
+        }
+      />
+      <section className="panel list-panel">
+        <div className="list-toolbar">
+          <div className="list-toolbar-title">
+            <span className="live-dot" />
+            全部事项 <span className="count-pill">{data?.total ?? 0}</span>
+          </div>
+          <div className="list-filters">
+            <Select
+              aria-label="筛选状态"
+              allowClear
+              placeholder="全部状态"
+              value={status}
+              onChange={(value) => {
+                setStatus(value);
+                setPage(1);
+              }}
+              style={{ width: 140 }}
+              options={['RUNNING', 'RETURNED', 'BLOCKED', 'COMPLETED', 'REJECTED', 'WITHDRAWN'].map(
+                (value) => ({
+                  value,
+                  label: {
+                    RUNNING: '进行中',
+                    RETURNED: '待修改',
+                    BLOCKED: '异常待处理',
+                    COMPLETED: '已完成',
+                    REJECTED: '已拒绝',
+                    WITHDRAWN: '已撤回',
+                  }[value],
+                }),
+              )}
+            />
+            <Input.Search
+              aria-label="搜索申请"
+              placeholder="搜索申请标题"
+              allowClear
+              onSearch={(value) => {
+                setSearch(value);
+                setPage(1);
+              }}
+              style={{ width: 250 }}
+            />
+          </div>
+        </div>
+        {error ? (
+          <Alert type="error" message={error.message} />
+        ) : (
+          <Table
+            rowKey="id"
+            loading={isFetching}
+            dataSource={data?.items}
+            pagination={{
+              current: page,
+              pageSize: 20,
+              total: data?.total,
+              onChange: setPage,
+              showSizeChanger: false,
+              showTotal: (total) => `共 ${total} 条事项`,
+            }}
+            scroll={{ x: 850 }}
+            columns={[
+              {
+                title: '申请事项',
+                dataIndex: 'title',
+                render: (title: string, record: Instance) => (
+                  <Link to={`/instances/${record.id}`} className="table-title">
+                    <span className={`item-symbol symbol-${record.type.toLowerCase()}`}>
+                      <Icon name={record.type === 'INCIDENT' ? 'tool' : 'file'} size={18} />
+                    </span>
+                    <span>
+                      {title}
+                      <small>{record.id.slice(0, 8).toUpperCase()}</small>
+                    </span>
+                  </Link>
+                ),
+              },
+              {
+                title: '申请人',
+                dataIndex: 'applicantId',
+                width: 100,
+                render: (id: string) =>
+                  directory.data?.members.find((m) => m.userId === id)?.name ?? '—',
+              },
+              {
+                title: '类型',
+                dataIndex: 'type',
+                width: 90,
+                render: (type: ApplicationType) => <TypeTag type={type} />,
+              },
+              {
+                title: '状态',
+                width: 130,
+                render: (_: unknown, row: Instance) => (
+                  <div>
+                    <Status value={row.status} />
+                    {row.type === 'INCIDENT' &&
+                      row.state.tickets.at(-1) &&
+                      row.status === 'RUNNING' && (
+                        <small className="ticket-substatus">
+                          {
+                            {
+                              ASSIGNED: '待认领',
+                              IN_PROGRESS: '处理中',
+                              RESOLVED: '待验收',
+                              CLOSED: '已验收',
+                              CANCELLED: '已取消',
+                            }[row.state.tickets.at(-1)!.status]
+                          }
+                        </small>
+                      )}
+                  </div>
+                ),
+              },
+              {
+                title: '流程版本',
+                dataIndex: 'versionNumber',
+                width: 100,
+                render: (value: number) => <span className="version-chip">v{value}</span>,
+              },
+              { title: '提交时间', dataIndex: 'createdAt', width: 145, render: formatDate },
+              {
+                title: '',
+                key: 'action',
+                width: 75,
+                render: (_: unknown, row: Instance) => (
+                  <Link to={`/instances/${row.id}`}>查看 ↗</Link>
+                ),
+              },
+            ]}
+          />
+        )}
+      </section>
+    </>
+  );
 }
-interface FormValues { title: string; type: ApplicationType; amount?: number; days?: number; priority: RequestData['priority']; description: string }
-export function RequestForm({ initial, defaultType = 'EXPENSE', onSubmit, busy, submitLabel = '提交申请' }: { initial?: RequestData; defaultType?: ApplicationType; onSubmit: (data: RequestData) => void; busy: boolean; submitLabel?: string }) {
-  const [form] = Form.useForm<FormValues>(); const type: ApplicationType = Form.useWatch('type', form) ?? initial?.type ?? defaultType;
-  return <Form form={form} layout="vertical" initialValues={initial ? { ...initial, amount: initial.amountCents / 100, days: initial.leaveMinutes / 480 } : { type: defaultType, priority: 'NORMAL', description: '' }} onFinish={values => onSubmit({ title: values.title, type: values.type, description: values.description ?? '', amountCents: ['EXPENSE', 'PURCHASE'].includes(values.type) ? Math.round((values.amount ?? 0) * 100) : 0, leaveMinutes: values.type === 'LEAVE' ? Math.round((values.days ?? 0) * 480) : 0, priority: values.priority })}><Form.Item name="type" label="申请类型" rules={[{ required: true }]}><Select disabled={!!initial} options={applicationTypes.map(value => ({ value, label: typeLabels[value] }))}/></Form.Item><Form.Item name="title" label="申请标题" rules={[{ required: true, min: 2, max: 120, whitespace: true, message: '请输入 2–120 字的标题' }]}><Input placeholder="用一句话说明申请事项" maxLength={120}/></Form.Item>{['EXPENSE', 'PURCHASE'].includes(type) && <Form.Item name="amount" label="申请金额（元）" rules={[{ required: true, type: 'number', min: 0.01, max: 10000000, message: '请输入有效金额' }]}><InputNumber min={0.01} max={10000000} precision={2} prefix="¥" style={{ width: '100%' }} placeholder="0.00"/></Form.Item>}{type === 'LEAVE' && <Form.Item name="days" label="请假时长（工作日，每天 8 小时）" rules={[{ required: true, type: 'number', min: 0.5, max: 1095 }]}><InputNumber min={0.5} step={0.5} precision={1} style={{ width: '100%' }}/></Form.Item>}{type === 'INCIDENT' && <Form.Item name="priority" label="故障优先级"><Select options={[{ value: 'LOW', label: '低 · 不影响日常工作' }, { value: 'NORMAL', label: '普通 · 部分功能受影响' }, { value: 'HIGH', label: '高 · 工作受到明显影响' }, { value: 'URGENT', label: '紧急 · 核心业务中断' }]}/></Form.Item>}<Form.Item name="description" label={type === 'INCIDENT' ? '故障描述' : '申请说明'} rules={[{ max: 4000 }]}><Input.TextArea rows={5} maxLength={4000} showCount placeholder={type === 'INCIDENT' ? '请说明故障现象、发生时间和影响范围' : '补充用途、明细或交接安排，帮助处理人了解情况'}/></Form.Item><div className="form-actions"><Button type="primary" htmlType="submit" loading={busy} icon={<Icon name="arrow" size={16}/>}>{submitLabel}</Button><span>提交后可在详情页实时跟进进度</span></div></Form>;
+interface FormValues {
+  title: string;
+  type: ApplicationType;
+  amount?: number;
+  days?: number;
+  priority: RequestData['priority'];
+  description: string;
+}
+export function RequestForm({
+  initial,
+  defaultType = 'EXPENSE',
+  onSubmit,
+  busy,
+  submitLabel = '提交申请',
+}: {
+  initial?: RequestData;
+  defaultType?: ApplicationType;
+  onSubmit: (data: RequestData) => void;
+  busy: boolean;
+  submitLabel?: string;
+}) {
+  const [form] = Form.useForm<FormValues>();
+  const type: ApplicationType = Form.useWatch('type', form) ?? initial?.type ?? defaultType;
+  return (
+    <Form
+      form={form}
+      layout="vertical"
+      initialValues={
+        initial
+          ? { ...initial, amount: initial.amountCents / 100, days: initial.leaveMinutes / 480 }
+          : { type: defaultType, priority: 'NORMAL', description: '' }
+      }
+      onFinish={(values) =>
+        onSubmit({
+          title: values.title,
+          type: values.type,
+          description: values.description ?? '',
+          amountCents: ['EXPENSE', 'PURCHASE'].includes(values.type)
+            ? Math.round((values.amount ?? 0) * 100)
+            : 0,
+          leaveMinutes: values.type === 'LEAVE' ? Math.round((values.days ?? 0) * 480) : 0,
+          priority: values.priority,
+        })
+      }
+    >
+      <Form.Item name="type" label="申请类型" rules={[{ required: true }]}>
+        <Select
+          disabled={!!initial}
+          options={applicationTypes.map((value) => ({ value, label: typeLabels[value] }))}
+        />
+      </Form.Item>
+      <Form.Item
+        name="title"
+        label="申请标题"
+        rules={[
+          { required: true, min: 2, max: 120, whitespace: true, message: '请输入 2–120 字的标题' },
+        ]}
+      >
+        <Input placeholder="用一句话说明申请事项" maxLength={120} />
+      </Form.Item>
+      {['EXPENSE', 'PURCHASE'].includes(type) && (
+        <Form.Item
+          name="amount"
+          label="申请金额（元）"
+          rules={[
+            { required: true, type: 'number', min: 0.01, max: 10000000, message: '请输入有效金额' },
+          ]}
+        >
+          <InputNumber
+            min={0.01}
+            max={10000000}
+            precision={2}
+            prefix="¥"
+            style={{ width: '100%' }}
+            placeholder="0.00"
+          />
+        </Form.Item>
+      )}
+      {type === 'LEAVE' && (
+        <Form.Item
+          name="days"
+          label="请假时长（工作日，每天 8 小时）"
+          rules={[{ required: true, type: 'number', min: 0.5, max: 1095 }]}
+        >
+          <InputNumber min={0.5} step={0.5} precision={1} style={{ width: '100%' }} />
+        </Form.Item>
+      )}
+      {type === 'INCIDENT' && (
+        <Form.Item name="priority" label="故障优先级">
+          <Select
+            options={[
+              { value: 'LOW', label: '低 · 不影响日常工作' },
+              { value: 'NORMAL', label: '普通 · 部分功能受影响' },
+              { value: 'HIGH', label: '高 · 工作受到明显影响' },
+              { value: 'URGENT', label: '紧急 · 核心业务中断' },
+            ]}
+          />
+        </Form.Item>
+      )}
+      <Form.Item
+        name="description"
+        label={type === 'INCIDENT' ? '故障描述' : '申请说明'}
+        rules={[{ max: 4000 }]}
+      >
+        <Input.TextArea
+          rows={5}
+          maxLength={4000}
+          showCount
+          placeholder={
+            type === 'INCIDENT'
+              ? '请说明故障现象、发生时间和影响范围'
+              : '补充用途、明细或交接安排，帮助处理人了解情况'
+          }
+        />
+      </Form.Item>
+      <div className="form-actions">
+        <Button
+          type="primary"
+          htmlType="submit"
+          loading={busy}
+          icon={<Icon name="arrow" size={16} />}
+        >
+          {submitLabel}
+        </Button>
+        <span>提交后可在详情页实时跟进进度</span>
+      </div>
+    </Form>
+  );
 }
 export function NewRequest() {
-  const { tenant } = useApp(); const navigate = useNavigate(); const client = useQueryClient(); const { message } = AntApp.useApp(); const [params] = useSearchParams();
-  const requestedType = params.get('type'); const type = applicationTypes.includes(requestedType as ApplicationType) ? requestedType as ApplicationType : 'EXPENSE';
-  const definitions = useQuery({ queryKey: ['workflows', tenant.id], queryFn: () => api<Workflow[]>(tenantPath(tenant.id, '/workflows')) });
-  const submit = useMutation({ mutationFn: (data: RequestData) => mutate<{ id: string }>(tenantPath(tenant.id, '/instances'), { data, ...(params.get('linkedFrom') ? { linkedFrom: params.get('linkedFrom') } : {}) }), onSuccess: result => { message.success('申请已提交'); void client.invalidateQueries({ queryKey: ['instances'] }); void client.invalidateQueries({ queryKey: ['dashboard'] }); navigate(`/instances/${result.id}`); }, onError: error => message.error(error.message) });
-  return <><PageTitle eyebrow="WORKSPACE / NEW REQUEST" title="发起申请" description="填写必要的信息，剩下的交给流程。"/><div className="form-layout"><section className="panel form-panel"><div className="panel-heading"><div><h3>申请信息</h3><p>请确认信息准确，帮助审批更快完成</p></div><Icon name="file"/></div><div className="form-body"><RequestForm defaultType={type} onSubmit={data => submit.mutate(data)} busy={submit.isPending}/></div></section><aside className="form-aside"><div className="panel guidance-card"><span className="guidance-icon"><Icon name="flow" size={28}/></span><h3>清晰的流程，<br/>从完整的信息开始。</h3><p>系统会根据申请类型、金额和部门，自动找到合适的处理人。</p><div className="guidance-divider"/>{definitions.isPending ? <Skeleton paragraph={{ rows: 3 }}/> : definitions.data?.map(def => <div className="published-row" key={def.id}><span>{typeLabels[def.type]}</span><span className="version-chip">{def.latestVersion ? `已发布 v${def.latestVersion}` : '尚未发布'}</span></div>)}<small>申请提交后绑定发布版本。之后修改流程，已有申请仍按原版本继续执行。</small></div></aside></div></>;
+  const { tenant } = useApp();
+  const navigate = useNavigate();
+  const client = useQueryClient();
+  const { message } = AntApp.useApp();
+  const [params] = useSearchParams();
+  const requestedType = params.get('type');
+  const type = applicationTypes.includes(requestedType as ApplicationType)
+    ? (requestedType as ApplicationType)
+    : 'EXPENSE';
+  const definitions = useQuery({
+    queryKey: ['workflows', tenant.id],
+    queryFn: () => api<Workflow[]>(tenantPath(tenant.id, '/workflows')),
+  });
+  const submit = useMutation({
+    mutationFn: (data: RequestData) =>
+      mutate<{ id: string }>(tenantPath(tenant.id, '/instances'), {
+        data,
+        ...(params.get('linkedFrom') ? { linkedFrom: params.get('linkedFrom') } : {}),
+      }),
+    onSuccess: (result) => {
+      message.success('申请已提交');
+      void client.invalidateQueries({ queryKey: ['instances'] });
+      void client.invalidateQueries({ queryKey: ['dashboard'] });
+      navigate(`/instances/${result.id}`);
+    },
+    onError: (error) => message.error(error.message),
+  });
+  return (
+    <>
+      <PageTitle
+        eyebrow="WORKSPACE / NEW REQUEST"
+        title="发起申请"
+        description="填写必要的信息，剩下的交给流程。"
+      />
+      <div className="form-layout">
+        <section className="panel form-panel">
+          <div className="panel-heading">
+            <div>
+              <h3>申请信息</h3>
+              <p>请确认信息准确，帮助审批更快完成</p>
+            </div>
+            <Icon name="file" />
+          </div>
+          <div className="form-body">
+            <RequestForm
+              defaultType={type}
+              onSubmit={(data) => submit.mutate(data)}
+              busy={submit.isPending}
+            />
+          </div>
+        </section>
+        <aside className="form-aside">
+          <div className="panel guidance-card">
+            <span className="guidance-icon">
+              <Icon name="flow" size={28} />
+            </span>
+            <h3>
+              清晰的流程，
+              <br />
+              从完整的信息开始。
+            </h3>
+            <p>系统会根据申请类型、金额和部门，自动找到合适的处理人。</p>
+            <div className="guidance-divider" />
+            {definitions.isPending ? (
+              <Skeleton paragraph={{ rows: 3 }} />
+            ) : (
+              definitions.data?.map((def) => (
+                <div className="published-row" key={def.id}>
+                  <span>{typeLabels[def.type]}</span>
+                  <span className="version-chip">
+                    {def.latestVersion ? `已发布 v${def.latestVersion}` : '尚未发布'}
+                  </span>
+                </div>
+              ))
+            )}
+            <small>申请提交后绑定发布版本。之后修改流程，已有申请仍按原版本继续执行。</small>
+          </div>
+        </aside>
+      </div>
+    </>
+  );
 }
