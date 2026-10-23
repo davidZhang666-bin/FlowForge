@@ -47,7 +47,9 @@ try {
   await control.query(
     `CREATE ROLE ${role} LOGIN PASSWORD '${password}' NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS`,
   );
-  await control.query(`CREATE DATABASE ${name}`);
+  await control.query(
+    `CREATE DATABASE ${name} TEMPLATE template0 ENCODING 'UTF8' LC_COLLATE 'C' LC_CTYPE 'C'`,
+  );
   const migration = await run(['node_modules/prisma/build/index.js', 'migrate', 'deploy']);
   if (migration !== 0) throw new Error('Test database migration failed');
   const grants = new pg.Client({ connectionString: testAdmin.toString() });

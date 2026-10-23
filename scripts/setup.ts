@@ -66,7 +66,10 @@ const databaseName = new URL(url).pathname.slice(1);
 if (!/^[a-z][a-z0-9_]{0,62}$/.test(databaseName))
   throw new Error('Database name must be a simple lowercase identifier');
 const found = await admin.query('SELECT 1 FROM pg_database WHERE datname = $1', [databaseName]);
-if (!found.rowCount) await admin.query(`CREATE DATABASE "${databaseName}"`);
+if (!found.rowCount)
+  await admin.query(
+    `CREATE DATABASE "${databaseName}" TEMPLATE template0 ENCODING 'UTF8' LC_COLLATE 'C' LC_CTYPE 'C'`,
+  );
 await admin.end();
 const control = new pg.Client({ connectionString: url });
 await control.connect();

@@ -21,6 +21,7 @@ const db = new ManagedPostgres({
   port: Number(process.env.DB_PORT ?? 55432),
   persistent: true,
   authMethod: 'scram-sha-256',
+  initdbFlags: ['--encoding=UTF8', '--locale=C'],
   postgresFlags: ['-h', '127.0.0.1'],
   onLog: (message) => process.stdout.write(`${String(message)}\n`),
   onError: (message) => process.stderr.write(`${String(message)}\n`),

@@ -42,7 +42,9 @@ try {
   await control.query(
     `CREATE ROLE ${migrator} LOGIN PASSWORD '${admin.password}' NOSUPERUSER NOCREATEDB CREATEROLE NOBYPASSRLS`,
   );
-  await control.query(`CREATE DATABASE ${database} OWNER ${migrator}`);
+  await control.query(
+    `CREATE DATABASE ${database} OWNER ${migrator} TEMPLATE template0 ENCODING 'UTF8' LC_COLLATE 'C' LC_CTYPE 'C'`,
+  );
   await run('scripts/provision.ts');
   await run('scripts/bootstrap.ts');
   const probe = new pg.Client({ connectionString: admin.toString() });
