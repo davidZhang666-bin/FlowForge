@@ -233,7 +233,7 @@ export function NotificationsPage() {
                   }}
                 >
                   <Icon name="bell" />
-                  {title.split(' · ')[0]}
+                  {title}
                   <Tag color={row.readAt ? 'default' : 'blue'}>{row.readAt ? '已读' : '未读'}</Tag>
                 </Link>
               ),
@@ -266,10 +266,35 @@ interface FailedEvent {
   lastError: string;
   failedAt: string;
 }
+interface ManagementLog {
+  id: string;
+  actorId: string;
+  action: string;
+  subjectId: string;
+  payload: unknown;
+  occurredAt: string;
+}
+const auditLabels: Record<string, string> = {
+  'workflow.draft_saved': '保存流程草稿',
+  'workflow.published': '发布流程版本',
+  'membership.updated': '变更成员权限',
+  'outbox.replayed': '重投失败事件',
+};
 export function OperationsPage() {
   const { tenant } = useApp();
   const { message } = AntApp.useApp();
   const client = useQueryClient();
+  const audit = useQuery({
+    queryKey: ['management-audit', tenant.id],
+    queryFn: () => api<ManagementLog[]>(tenantPath(tenant.id, '/audit')),
+    enabled: tenant.role === 'admin',
+    refetchInterval: 10000,
+  });
+  const directory = useQuery({
+    queryKey: ['directory', tenant.id],
+    queryFn: () => api<Directory>(tenantPath(tenant.id, '/directory')),
+    enabled: tenant.role === 'admin',
+  });
   const query = useQuery({
     queryKey: ['outbox', tenant.id],
     queryFn: () => api<FailedEvent[]>(tenantPath(tenant.id, '/outbox/failures')),
@@ -325,6 +350,44 @@ export function OperationsPage() {
                 </Button>
               ),
             },
+          ]}
+        />
+      </section>
+      <section className="panel" style={{ marginTop: 24 }}>
+        <div className="panel-heading">
+          <div>
+            <h3>管理审计</h3>
+            <p>最近 100 条记录 · 与业务变更在同一事务写入 · 不可修改</p>
+          </div>
+        </div>
+        {audit.error && <Alert type="error" message={audit.error.message} />}
+        <Table<ManagementLog>
+          rowKey="id"
+          loading={audit.isPending}
+          dataSource={audit.data}
+          scroll={{ x: 750 }}
+          pagination={{ pageSize: 10 }}
+          expandable={{
+            expandedRowRender: (row) => (
+              <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+                {JSON.stringify(row.payload, null, 2)}
+              </pre>
+            ),
+          }}
+          columns={[
+            {
+              title: '操作',
+              dataIndex: 'action',
+              render: (action: string) => auditLabels[action] ?? action,
+            },
+            {
+              title: '操作人',
+              dataIndex: 'actorId',
+              render: (id: string) =>
+                directory.data?.members.find((m) => m.userId === id)?.name ?? id,
+            },
+            { title: '对象 ID', dataIndex: 'subjectId', ellipsis: true },
+            { title: '时间', dataIndex: 'occurredAt', render: formatDate, width: 170 },
           ]}
         />
       </section>

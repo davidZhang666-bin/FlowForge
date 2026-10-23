@@ -83,6 +83,14 @@
               }
             }
           },
+          "413": {
+            "description": "请求体超过 128 KB",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
           "422": {
             "description": "非法业务转换或发布配置",
             "content": {
@@ -170,6 +178,14 @@
               }
             }
           },
+          "413": {
+            "description": "请求体超过 128 KB",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
           "422": {
             "description": "非法业务转换或发布配置",
             "content": {
@@ -250,6 +266,14 @@
               }
             }
           },
+          "413": {
+            "description": "请求体超过 128 KB",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
           "422": {
             "description": "非法业务转换或发布配置",
             "content": {
@@ -324,6 +348,14 @@
           },
           "409": {
             "description": "修订号、唯一约束或幂等冲突",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "413": {
+            "description": "请求体超过 128 KB",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/Error" }
@@ -417,6 +449,14 @@
               }
             }
           },
+          "413": {
+            "description": "请求体超过 128 KB",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
           "422": {
             "description": "非法业务转换或发布配置",
             "content": {
@@ -498,6 +538,14 @@
           },
           "409": {
             "description": "修订号、唯一约束或幂等冲突",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "413": {
+            "description": "请求体超过 128 KB",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/Error" }
@@ -591,6 +639,14 @@
               }
             }
           },
+          "413": {
+            "description": "请求体超过 128 KB",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
           "422": {
             "description": "非法业务转换或发布配置",
             "content": {
@@ -672,6 +728,109 @@
           },
           "409": {
             "description": "修订号、唯一约束或幂等冲突",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "413": {
+            "description": "请求体超过 128 KB",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "422": {
+            "description": "非法业务转换或发布配置",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "429": {
+            "description": "请求频率受限",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "500": {
+            "description": "服务异常",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tenants/{tenantId}/audit": {
+      "get": {
+        "summary": "查询 audit",
+        "operationId": "get__tenants_tenantId_audit",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": { "schema": { "type": "object" } }
+            }
+          },
+          "400": {
+            "description": "输入校验失败",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录或会话过期",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "403": {
+            "description": "权限或 CSRF 校验失败",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "404": {
+            "description": "资源不存在或无权查看",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "409": {
+            "description": "修订号、唯一约束或幂等冲突",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "413": {
+            "description": "请求体超过 128 KB",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/Error" }
@@ -805,6 +964,14 @@
               }
             }
           },
+          "413": {
+            "description": "请求体超过 128 KB",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
           "422": {
             "description": "非法业务转换或发布配置",
             "content": {
@@ -886,6 +1053,14 @@
           },
           "409": {
             "description": "修订号、唯一约束或幂等冲突",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "413": {
+            "description": "请求体超过 128 KB",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/Error" }
@@ -979,6 +1154,14 @@
           },
           "409": {
             "description": "修订号、唯一约束或幂等冲突",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "413": {
+            "description": "请求体超过 128 KB",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/Error" }
@@ -1098,6 +1281,14 @@
               }
             }
           },
+          "413": {
+            "description": "请求体超过 128 KB",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
           "422": {
             "description": "非法业务转换或发布配置",
             "content": {
@@ -1206,6 +1397,14 @@
           },
           "409": {
             "description": "修订号、唯一约束或幂等冲突",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "413": {
+            "description": "请求体超过 128 KB",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/Error" }
@@ -1327,6 +1526,14 @@
               }
             }
           },
+          "413": {
+            "description": "请求体超过 128 KB",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
           "422": {
             "description": "非法业务转换或发布配置",
             "content": {
@@ -1442,6 +1649,14 @@
               }
             }
           },
+          "413": {
+            "description": "请求体超过 128 KB",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
           "422": {
             "description": "非法业务转换或发布配置",
             "content": {
@@ -1529,6 +1744,14 @@
           },
           "409": {
             "description": "修订号、唯一约束或幂等冲突",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "413": {
+            "description": "请求体超过 128 KB",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/Error" }
@@ -1650,6 +1873,14 @@
               }
             }
           },
+          "413": {
+            "description": "请求体超过 128 KB",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
           "422": {
             "description": "非法业务转换或发布配置",
             "content": {
@@ -1745,6 +1976,14 @@
           },
           "409": {
             "description": "修订号、唯一约束或幂等冲突",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "413": {
+            "description": "请求体超过 128 KB",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/Error" }
@@ -1850,6 +2089,14 @@
               }
             }
           },
+          "413": {
+            "description": "请求体超过 128 KB",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
           "422": {
             "description": "非法业务转换或发布配置",
             "content": {
@@ -1943,6 +2190,14 @@
           },
           "409": {
             "description": "修订号、唯一约束或幂等冲突",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "413": {
+            "description": "请求体超过 128 KB",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/Error" }

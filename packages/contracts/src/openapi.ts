@@ -47,7 +47,7 @@ const resources: {
   { path: '/auth/logout', method: 'post', summary: '注销当前会话' },
   { path: '/session', method: 'get', summary: '读取当前用户及有效企业成员身份' },
   { path: '/openapi.json', method: 'get', summary: '读取接口规范', public: true },
-  ...['dashboard', 'directory', 'notifications', 'outbox/failures'].map((resource) => ({
+  ...['dashboard', 'directory', 'notifications', 'outbox/failures', 'audit'].map((resource) => ({
     path: `/tenants/{tenantId}/${resource}`,
     method: 'get' as const,
     summary: `查询 ${resource}`,
@@ -177,7 +177,7 @@ export function openApiDocument() {
       responses: {
         [success]: { description: '成功', content },
         ...Object.fromEntries(
-          [400, 401, 403, 404, 409, 422, 429, 500].map((code) => [
+          [400, 401, 403, 404, 409, 413, 422, 429, 500].map((code) => [
             String(code),
             {
               description: {
@@ -186,6 +186,7 @@ export function openApiDocument() {
                 403: '权限或 CSRF 校验失败',
                 404: '资源不存在或无权查看',
                 409: '修订号、唯一约束或幂等冲突',
+                413: '请求体超过 128 KB',
                 422: '非法业务转换或发布配置',
                 429: '请求频率受限',
                 500: '服务异常',
