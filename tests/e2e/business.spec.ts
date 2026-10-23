@@ -85,7 +85,7 @@ test('return and resubmit preserve the version and show separate rounds', async 
   await page.getByRole('button', { name: '重新提交', exact: true }).click();
   await status(page, '第 2 轮');
   await status(page, '流程 v1');
-  await page.getByLabel('查看审批轮次').click();
+  await page.getByRole('combobox', { name: '查看审批轮次' }).click();
   await page.getByText('第 1 轮执行', { exact: true }).click();
   await expect(page.locator('.event-panel')).toContainText('退回申请人');
 });
@@ -145,4 +145,31 @@ test('ordinary members cannot enter the administrative designer', async ({ page 
   await expect(page.getByRole('link', { name: '流程设计', exact: true })).toHaveCount(0);
   await page.goto('/workflows');
   await expect(page.getByText('仅企业管理员可配置流程', { exact: true })).toBeVisible();
+});
+
+test('dragged nodes persist in drafts and disconnected nodes block publication', async ({
+  page,
+}) => {
+  await login(page, 'admin');
+  await page.goto('/workflows');
+  await page.getByRole('heading', { name: '费用报销流程', exact: true }).click();
+  const node = page.locator('.react-flow__node').filter({ hasText: '部门负责人审批' });
+  const bounds = await node.boundingBox();
+  expect(bounds).not.toBeNull();
+  await page.mouse.move(bounds!.x + bounds!.width / 2, bounds!.y + 25);
+  await page.mouse.down();
+  await page.mouse.move(bounds!.x + bounds!.width / 2 + 80, bounds!.y + 65, { steps: 10 });
+  await page.mouse.up();
+  await page.getByRole('button', { name: '保存草稿', exact: true }).click();
+  await expect(page.getByText('草稿已保存', { exact: true })).toBeVisible();
+  const originalCount = await page.locator('.react-flow__node').count();
+  await page
+    .getByRole('button', { name: '审批节点', exact: true })
+    .dragTo(page.locator('.designer-canvas'), { targetPosition: { x: 100, y: 200 } });
+  await expect(page.locator('.react-flow__node')).toHaveCount(originalCount + 1);
+  await expect(page.getByRole('button', { name: '发布新版本', exact: true })).toBeDisabled();
+  await page.getByRole('button', { name: '保存草稿', exact: true }).click();
+  await expect(page.getByText('草稿已保存', { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.locator('.react-flow__node')).toHaveCount(originalCount + 1);
 });
