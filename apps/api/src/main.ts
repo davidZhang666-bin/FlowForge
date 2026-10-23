@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import 'dotenv/config';
-import { Module } from '@nestjs/common';
+import { BadRequestException, Module } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { json as expressJson } from 'express';
 import cookieParser from 'cookie-parser';
@@ -40,6 +40,21 @@ export async function createApp() {
       next: import('express').NextFunction,
     ) => {
       res.setHeader('x-request-id', randomUUID());
+      const started = performance.now();
+      res.on('finish', () => {
+        if (process.env.FLOWFORGE_TEST !== '1')
+          console.log(
+            JSON.stringify({
+              service: 'api',
+              event: 'http.completed',
+              requestId: res.getHeader('x-request-id'),
+              method: req.method,
+              path: req.path,
+              status: res.statusCode,
+              durationMs: Math.round(performance.now() - started),
+            }),
+          );
+      });
       if (
         !['GET', 'HEAD', 'OPTIONS'].includes(req.method) &&
         req.headers.origin &&
@@ -52,6 +67,25 @@ export async function createApp() {
     },
   );
   app.use(expressJson({ limit: '128kb' }));
+  app.use(
+    (
+      req: import('express').Request,
+      _res: import('express').Response,
+      next: import('express').NextFunction,
+    ) => {
+      // Reject extreme nesting before recursive schema validation; never evaluate input expressions.
+      const pending: { value: unknown; depth: number }[] = [{ value: req.body, depth: 0 }];
+      while (pending.length) {
+        const item = pending.pop()!;
+        if (item.depth > 24) return next(new BadRequestException('JSON 嵌套层级过深'));
+        if (item.value && typeof item.value === 'object') {
+          for (const value of Object.values(item.value))
+            pending.push({ value, depth: item.depth + 1 });
+        }
+      }
+      next();
+    },
+  );
   app.use(cookieParser());
   app.useGlobalFilters(new ErrorFilter());
   app.enableShutdownHooks();

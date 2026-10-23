@@ -186,6 +186,12 @@ describe('authenticated HTTP boundary', () => {
     const employee = await login(f.emails.employee, f.password);
     expect((await request(`/tenants/${f.tenantId}/audit`, employee)).status).toBe(403);
   });
+  it('rejects pathological JSON nesting before recursive validation', async () => {
+    const body = '{"value":'.repeat(300) + '0' + '}'.repeat(300);
+    const response = await request('/auth/login', undefined, { method: 'POST', body });
+    expect(response.status).toBe(400);
+    expect(await response.text()).toContain('JSON 嵌套层级过深');
+  });
   it('throttles repeated incorrect credentials', async () => {
     let status = 0;
     for (let i = 0; i < 11; i++)

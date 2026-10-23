@@ -26,6 +26,7 @@ const env = {
   ...(process.argv.includes('--e2e')
     ? {
         PORT: '3101',
+        WORKER_PORT: '3103',
         WEB_PORT: '5174',
         WEB_ORIGIN: 'http://localhost:5174',
         VITE_API_TARGET: 'http://127.0.0.1:3101',
