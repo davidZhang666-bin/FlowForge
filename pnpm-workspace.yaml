@@ -1,8 +1,13 @@
 packages:
   - apps/*
   - packages/*
-onlyBuiltDependencies:
-  - '@prisma/engines'
-  - prisma
-  - embedded-postgres
-  - esbuild
+allowBuilds:
+  '@embedded-postgres/windows-x64': true
+  '@embedded-postgres/linux-x64': true
+  '@embedded-postgres/linux-arm64': true
+  '@embedded-postgres/darwin-x64': true
+  '@embedded-postgres/darwin-arm64': true
+  '@prisma/engines': true
+  embedded-postgres: true
+  esbuild: true
+  prisma: true
