@@ -1,8 +1,22 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
 import { evaluateRule, validateRule } from './rules.js';
+import type { Rule } from '../../contracts/src/index.js';
 
 describe('declarative rules', () => {
+  it('bounds complexity and treats invalid and absent values as non-matches', () => {
+    let rule: Rule = { op: 'eq', field: 'type', value: 'LEAVE' };
+    for (let i = 0; i < 10; i++) rule = { op: 'not', rule };
+    expect(validateRule(rule)).toContain('条件嵌套不能超过 8 层');
+    expect(evaluateRule(rule, {})).toBe(false);
+    expect(evaluateRule({ op: 'eq', field: 'unknown', value: 'x' }, {})).toBe(false);
+    expect(evaluateRule({ op: 'eq', field: 'type', value: 'LEAVE' }, { type: null })).toBe(false);
+    expect(evaluateRule({ op: 'in', field: 'type', value: ['LEAVE'] }, { type: 1 })).toBe(false);
+    for (const op of ['gt', 'gte', 'lt', 'lte'] as const)
+      expect(evaluateRule({ op, field: 'amountCents', value: 2 }, { amountCents: '3' })).toBe(
+        false,
+      );
+  });
   it.each([
     ['eq', 10, true],
     ['ne', 10, false],
