@@ -1,4 +1,4 @@
-import { ForbiddenException, HttpException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, HttpException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 import { Database } from '../../../packages/data/src/index.js';
@@ -8,7 +8,7 @@ import type { Actor, DataScope, Role } from '../../../packages/contracts/src/ind
 export interface AuthRequest extends Request { cookies: Record<string, string> }
 @Injectable()
 export class AuthService {
-  constructor(private readonly db: Database) {}
+  constructor(@Inject(Database) private readonly db: Database) {}
   async login(input: unknown, req: AuthRequest, res: Response): Promise<{ csrfToken: string }> {
     const { email, password } = z.object({ email: z.string().email().max(200).transform(s => s.toLowerCase()), password: z.string().min(1).max(200) }).strict().parse(input);
     const key = digest(`${req.ip ?? 'unknown'}:${email}`);

@@ -1,4 +1,4 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { z } from 'zod';
 import { Database, json } from '../../../packages/data/src/index.js';
 import { flowSchema, type Actor } from '../../../packages/contracts/src/index.js';
@@ -6,7 +6,7 @@ import { validateGraph } from '../../../packages/core/src/index.js';
 
 @Injectable()
 export class WorkflowService {
-  constructor(private readonly db: Database) {}
+  constructor(@Inject(Database) private readonly db: Database) {}
   private admin(actor: Actor): void { if (actor.role !== 'admin') throw new ForbiddenException('只有企业管理员可以配置流程'); }
   async list(actor: Actor): Promise<unknown> {
     return this.db.tenant(actor.tenantId, async tx => {

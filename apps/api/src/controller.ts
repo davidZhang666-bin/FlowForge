@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Param, Patch, Post, Query, Req, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { z } from 'zod';
 import { AuthService, type AuthRequest } from './auth.js';
@@ -9,7 +9,7 @@ import { Database } from '../../../packages/data/src/index.js';
 
 @Controller()
 export class ApiController {
-  constructor(private readonly auth: AuthService, private readonly workflows: WorkflowService, private readonly processes: ProcessService, private readonly organization: OrganizationService, private readonly db: Database) {}
+  constructor(@Inject(AuthService) private readonly auth: AuthService, @Inject(WorkflowService) private readonly workflows: WorkflowService, @Inject(ProcessService) private readonly processes: ProcessService, @Inject(OrganizationService) private readonly organization: OrganizationService, @Inject(Database) private readonly db: Database) {}
   @Get('health') async health() { await this.db.client.$queryRaw`SELECT 1`; return { status: 'ok', service: 'flowforge-api' }; }
   @Post('api/v1/auth/login') login(@Body() input: unknown, @Req() req: AuthRequest, @Res({ passthrough: true }) res: Response) { return this.auth.login(input, req, res); }
   @Post('api/v1/auth/logout') logout(@Req() req: AuthRequest, @Res({ passthrough: true }) res: Response) { return this.auth.logout(req, res); }

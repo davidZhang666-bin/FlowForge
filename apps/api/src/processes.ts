@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
@@ -12,12 +12,12 @@ import { instanceScope } from './access.js';
 
 @Injectable()
 export class ProcessService {
-  constructor(private readonly db: Database) {}
+  constructor(@Inject(Database) private readonly db: Database) {}
   private async idempotent<T>(actor: Actor, key: string | undefined, input: unknown, operation: (tx: Transaction) => Promise<T>): Promise<T> {
     z.string().min(8).max(120).regex(/^[a-zA-Z0-9:_-]+$/).parse(key);
     const requestHash = digest(canonical(input));
     return this.db.tenant(actor.tenantId, async tx => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`${actor.tenantId}:${actor.userId}:${key!}`}, 0))`;
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`${actor.tenantId}:${actor.userId}:${key!}`}, 0))::text`;
       const identity = { tenantId: actor.tenantId, actorId: actor.userId, key: key! };
       const existing = await tx.idempotencyRecord.findUnique({ where: { tenantId_actorId_key: identity } });
       if (existing) {

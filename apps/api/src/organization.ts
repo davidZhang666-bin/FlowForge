@@ -1,4 +1,4 @@
-import { ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Inject, Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import { roles, scopes, type Actor } from '../../../packages/contracts/src/index.js';
 import { Database } from '../../../packages/data/src/index.js';
@@ -6,7 +6,7 @@ import { tenantMembers } from '../../../packages/data/src/members.js';
 
 @Injectable()
 export class OrganizationService {
-  constructor(private readonly db: Database) {}
+  constructor(@Inject(Database) private readonly db: Database) {}
   async directory(actor: Actor): Promise<unknown> {
     return this.db.tenant(actor.tenantId, async tx => ({ departments: await tx.department.findMany({ orderBy: { name: 'asc' } }), members: await tenantMembers(tx), memberships: actor.role === 'admin' ? await tx.membership.findMany() : [] }));
   }
@@ -15,7 +15,7 @@ export class OrganizationService {
     z.string().uuid().parse(userId);
     const data = z.object({ role: z.enum(roles), scope: z.enum(scopes), departmentId: z.string().uuid(), active: z.boolean() }).strict().parse(input);
     return this.db.tenant(actor.tenantId, async tx => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`org:${actor.tenantId}`}, 0))`;
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`org:${actor.tenantId}`}, 0))::text`;
       const old = await tx.membership.findUniqueOrThrow({ where: { tenantId_userId: { tenantId: actor.tenantId, userId } } });
       if (userId === actor.userId && (!data.active || data.role !== 'admin')) throw new ConflictException('不能停用或降级当前管理员，请由另一位管理员操作');
       if (old.role === 'admin' && old.active && (!data.active || data.role !== 'admin') && await tx.membership.count({ where: { role: 'admin', active: true } }) <= 1) throw new ConflictException('企业必须保留至少一位管理员');
