@@ -241,7 +241,7 @@ describe('version and delivery guarantees', () => {
     await f.control.client.$executeRawUnsafe(
       'CREATE TRIGGER fail_test_notification BEFORE INSERT ON notifications FOR EACH ROW EXECUTE FUNCTION fail_test_notification()',
     );
-    let failedId = '';
+    let failedId: string;
     try {
       const id = await submit(10000, undefined, 'FAILURE delivery scenario');
       for (let i = 0; i < 30; i++) if (!(await worker.deliverOne(f.tenantId))) break;

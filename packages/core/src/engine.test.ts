@@ -223,4 +223,94 @@ describe('incident lifecycle', () => {
     expect(run(fixed, applicant, 'accept').status).toBe('COMPLETED');
     expect(run(claimed, applicant, 'withdraw').tickets[0]?.status).toBe('CANCELLED');
   });
+  it('permits audited handling reassignment and explicit start', () => {
+    const source = begin();
+    expect(() =>
+      executeCommand(
+        source,
+        incidentGraph,
+        { action: 'transfer', expectedRevision: 0, targetUserId: agent.userId, comment: 'x' },
+        reviewer,
+        context(),
+      ),
+    ).toThrow('无权指派');
+    const transferred = executeCommand(
+      source,
+      incidentGraph,
+      {
+        action: 'transfer',
+        expectedRevision: 0,
+        targetUserId: agent.userId,
+        comment: '派给服务人员',
+      },
+      manager,
+      context(),
+    ).state;
+    expect(transferred.tickets[0]?.assigneeId).toBe(agent.userId);
+    expect(() => run(transferred, reviewer, 'start')).toThrow('只有处理人');
+    const started = run(transferred, agent, 'start');
+    expect(started.tickets[0]?.status).toBe('IN_PROGRESS');
+    expect(() => run(started, agent, 'approve')).toThrow('不是审批节点');
+    const resolved = run(started, agent, 'resolve', '已修复');
+    expect(() => run(resolved, manager, 'reopen', 'x')).toThrow('只有申请人');
+    expect(run(resolved, applicant, 'accept').status).toBe('COMPLETED');
+  });
+  it('recovers missing service assignees and escalates overdue tickets once', () => {
+    const blocked = startProcess(
+      id(51),
+      id(61),
+      incidentGraph,
+      { ...data, type: 'INCIDENT' },
+      applicant,
+      { ...context(), members: [] },
+    ).state;
+    const recovered = executeCommand(
+      blocked,
+      incidentGraph,
+      {
+        action: 'assign',
+        targetUserId: agent.userId,
+        expectedRevision: 0,
+        comment: '恢复服务台办理',
+      },
+      manager,
+      context(),
+    ).state;
+    expect(recovered.tickets).toHaveLength(1);
+    const escalated = escalateOverdue(recovered, incidentGraph, manager, {
+      ...context(),
+      now: '2026-11-01T00:00:00.000Z',
+    })!;
+    expect(escalated.state.tickets[0]?.escalated).toBe(true);
+    expect(escalated.state.tickets[0]?.status).toBe('ASSIGNED');
+  });
+});
+
+it('completes a multi-user OR-sign node after the first valid approval', () => {
+  const leave = createTemplate('LEAVE');
+  const source = startProcess(
+    id(52),
+    id(62),
+    leave,
+    { ...data, type: 'LEAVE', leaveMinutes: 2000 },
+    applicant,
+    context(),
+  ).state;
+  const first = executeCommand(
+    source,
+    leave,
+    { expectedRevision: 0, action: 'approve', taskId: source.tasks[0]!.id, comment: '' },
+    manager,
+    context(),
+  ).state;
+  const task = first.tasks.find((t) => t.status === 'PENDING' && t.assigneeId === reviewer.userId)!;
+  const final = executeCommand(
+    first,
+    leave,
+    { expectedRevision: 1, action: 'approve', taskId: task.id, comment: '' },
+    reviewer,
+    context(),
+  ).state;
+  expect(final.status).toBe('COMPLETED');
+  expect(final.tasks.find((t) => t.assigneeId === reviewer2.userId)?.status).toBe('CANCELLED');
 });
