@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { roles, scopes, type Actor } from '../../../packages/contracts/src/index.js';
 import { Database } from '../../../packages/data/src/index.js';
 import { tenantMembers } from '../../../packages/data/src/members.js';
+import { recordManagement } from '../../../packages/data/src/management.js';
 
 @Injectable()
 export class OrganizationService {
@@ -40,10 +41,15 @@ export class OrganizationService {
         (await tx.membership.count({ where: { role: 'admin', active: true } })) <= 1
       )
         throw new ConflictException('企业必须保留至少一位管理员');
-      return tx.membership.update({
+      const updated = await tx.membership.update({
         where: { tenantId_userId: { tenantId: actor.tenantId, userId } },
         data,
       });
+      await recordManagement(tx, actor, 'membership.updated', userId, {
+        before: old,
+        after: updated,
+      });
+      return updated;
     });
   }
   async notifications(actor: Actor): Promise<unknown> {
@@ -77,11 +83,19 @@ export class OrganizationService {
   async replay(actor: Actor, eventId: string): Promise<unknown> {
     if (actor.role !== 'admin') throw new ForbiddenException('需要企业管理员权限');
     z.string().uuid().parse(eventId);
-    return this.db.tenant(actor.tenantId, (tx) =>
-      tx.outbox.updateMany({
+    return this.db.tenant(actor.tenantId, async (tx) => {
+      const updated = await tx.outbox.updateMany({
         where: { eventId, failedAt: { not: null }, processedAt: null },
         data: { attempts: 0, failedAt: null, availableAt: new Date(), lastError: null },
-      }),
+      });
+      if (updated.count) await recordManagement(tx, actor, 'outbox.replayed', eventId, { eventId });
+      return updated;
+    });
+  }
+  async audit(actor: Actor): Promise<unknown> {
+    if (actor.role !== 'admin') throw new ForbiddenException('需要企业管理员权限');
+    return this.db.tenant(actor.tenantId, (tx) =>
+      tx.managementLog.findMany({ orderBy: { occurredAt: 'desc' }, take: 100 }),
     );
   }
 }

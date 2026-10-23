@@ -52,7 +52,7 @@ try {
   const grants = new pg.Client({ connectionString: testAdmin.toString() });
   await grants.connect();
   await grants.query(
-    `GRANT USAGE ON SCHEMA public TO ${role}; GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ${role}; REVOKE UPDATE, DELETE ON flow_versions, domain_events, audit_logs FROM ${role}; REVOKE ALL ON _prisma_migrations FROM ${role}`,
+    `GRANT USAGE ON SCHEMA public TO ${role}; GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ${role}; REVOKE UPDATE, DELETE ON flow_versions, domain_events, audit_logs, management_logs FROM ${role}; REVOKE ALL ON _prisma_migrations FROM ${role}`,
   );
   await grants.end();
   if (process.argv.includes('--e2e')) {

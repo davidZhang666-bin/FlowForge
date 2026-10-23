@@ -82,7 +82,7 @@ for (const args of [
 const grants = new pg.Client({ connectionString: url });
 await grants.connect();
 await grants.query(
-  'GRANT USAGE ON SCHEMA public TO ff_app; GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ff_app; REVOKE UPDATE, DELETE ON flow_versions, domain_events, audit_logs FROM ff_app; REVOKE ALL ON _prisma_migrations FROM ff_app',
+  'GRANT USAGE ON SCHEMA public TO ff_app; GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ff_app; REVOKE UPDATE, DELETE ON flow_versions, domain_events, audit_logs, management_logs FROM ff_app; REVOKE ALL ON _prisma_migrations FROM ff_app',
 );
 await grants.end();
 console.log('Database is ready. Run pnpm db:seed, then pnpm dev.');

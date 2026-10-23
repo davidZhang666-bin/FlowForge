@@ -10,6 +10,12 @@ import { openApiDocument } from '../../../packages/contracts/src/openapi.js';
 
 @Controller()
 export class ApiController {
+  @Get('api/v1/tenants/:tenantId/audit') async managementAudit(
+    @Param('tenantId') tenantId: string,
+    @Req() req: AuthRequest,
+  ) {
+    return this.organization.audit(await this.auth.actor(req, tenantId));
+  }
   @Get('api/v1/openapi.json') openapi() {
     return openApiDocument();
   }

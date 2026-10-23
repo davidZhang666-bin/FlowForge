@@ -10,6 +10,8 @@ import { z } from 'zod';
 import { Database, json } from '../../../packages/data/src/index.js';
 import { flowSchema, type Actor } from '../../../packages/contracts/src/index.js';
 import { validateGraph } from '../../../packages/core/src/index.js';
+import { recordManagement } from '../../../packages/data/src/management.js';
+import { canonical, digest } from '../../../packages/data/src/security.js';
 
 @Injectable()
 export class WorkflowService {
@@ -59,6 +61,10 @@ export class WorkflowService {
         data: { draft: json(graph), revision: { increment: 1 } },
       });
       if (!updated.count) throw new ConflictException('草稿已更新或不存在，请刷新后重试');
+      await recordManagement(tx, actor, 'workflow.draft_saved', id, {
+        revision: expectedRevision + 1,
+        graphHash: digest(canonical(graph)),
+      });
       return tx.flowDefinition.findUniqueOrThrow({ where: { id } });
     });
   }
@@ -92,7 +98,7 @@ export class WorkflowService {
         data: { latestVersion: { increment: 1 }, revision: { increment: 1 } },
       });
       if (!updated.count) throw new ConflictException('流程已被其他管理员发布');
-      return tx.flowVersion.create({
+      const version = await tx.flowVersion.create({
         data: {
           tenantId: actor.tenantId,
           definitionId: id,
@@ -101,6 +107,12 @@ export class WorkflowService {
           publishedBy: actor.userId,
         },
       });
+      await recordManagement(tx, actor, 'workflow.published', id, {
+        versionId: version.id,
+        number: version.number,
+        graphHash: digest(canonical(graph)),
+      });
+      return version;
     });
   }
 }
