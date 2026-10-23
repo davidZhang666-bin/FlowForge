@@ -19,12 +19,15 @@ export default defineConfig({
     outDir: '../../dist/web',
     emptyOutDir: true,
     chunkSizeWarningLimit: 1200,
-    rollupOptions: {
+    rolldownOptions: {
       output: {
-        manualChunks: {
-          react: ['react', 'react-dom', 'react-router-dom'],
-          antd: ['antd'],
-          flow: ['@xyflow/react'],
+        manualChunks(id) {
+          if (id.includes('/node_modules/')) {
+            if (id.includes('/@xyflow/')) return 'flow';
+            if (/\/(antd|@ant-design|rc-[^/]+)\//.test(id)) return 'antd';
+            if (/\/(react|react-dom|react-router|react-router-dom|scheduler)\//.test(id))
+              return 'react';
+          }
         },
       },
     },
