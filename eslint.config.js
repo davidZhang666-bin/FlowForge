@@ -6,6 +6,7 @@ export default ts.config(
   {
     ignores: [
       'dist/**',
+      '.local/**',
       'node_modules/**',
       'coverage/**',
       'playwright-report/**',
