@@ -1,0 +1,95 @@
+name: Quality
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18-bookworm
+        env:
+          POSTGRES_PASSWORD: ci-only-database-password
+          POSTGRES_DB: flowforge
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d flowforge"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_ADMIN_URL: postgresql://postgres:ci-only-database-password@localhost:5432/flowforge
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.5.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check && pnpm lint && pnpm typecheck
+      - run: pnpm test:coverage && pnpm build
+      - run: pnpm audit --audit-level high
+      - run: pnpm test:integration
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: quality-evidence
+          path: |
+            coverage/
+            playwright-report/
+            test-results/
+          retention-days: 14
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.5.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm setup
+      - run: pnpm test:integration
+      - run: pnpm db:stop
+        if: always()
+  containers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.5.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: node --input-type=module -e "import{randomBytes}from'node:crypto';import{writeFileSync}from'node:fs';writeFileSync('.env.docker','DB_ADMIN_PASSWORD='+randomBytes(24).toString('hex')+'\nDB_APP_PASSWORD='+randomBytes(24).toString('hex')+'\nWEB_ORIGIN=http://localhost:8080\n')"
+      - run: docker compose --env-file .env.docker up --build -d --wait
+      - run: curl --fail --retry 10 --retry-delay 3 http://localhost:8080/health
+      - run: curl --fail http://localhost:8080/api/v1/openapi.json
+      - name: Capture service logs
+        if: always()
+        run: docker compose --env-file .env.docker logs --no-color > compose.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: container-logs
+          path: compose.log
+          retention-days: 7
+      - run: docker compose --env-file .env.docker down -v
+        if: always()
