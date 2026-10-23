@@ -11,8 +11,11 @@ await control.connect();
 const suffix = randomBytes(6).toString('hex');
 const database = `ff_bootstrap_${suffix}`;
 const role = `ff_bootstrap_user_${suffix}`;
+const migrator = `ff_bootstrap_owner_${suffix}`;
 const admin = new URL(controlUrl);
 admin.pathname = `/${database}`;
+admin.username = migrator;
+admin.password = randomBytes(24).toString('hex');
 const runtime = new URL(admin);
 runtime.username = role;
 runtime.password = randomBytes(24).toString('hex');
@@ -36,15 +39,20 @@ async function run(script: string): Promise<void> {
   });
 }
 try {
-  await control.query(`CREATE DATABASE ${database}`);
+  await control.query(
+    `CREATE ROLE ${migrator} LOGIN PASSWORD '${admin.password}' NOSUPERUSER NOCREATEDB CREATEROLE NOBYPASSRLS`,
+  );
+  await control.query(`CREATE DATABASE ${database} OWNER ${migrator}`);
   await run('scripts/provision.ts');
   await run('scripts/bootstrap.ts');
   const probe = new pg.Client({ connectionString: admin.toString() });
   await probe.connect();
   try {
+    await probe.query('BEGIN');
     const rows = await probe.query<{ id: string }>('SELECT id FROM tenants');
     assert.equal(rows.rowCount, 1);
     env.MEMBER_TENANT_ID = rows.rows[0]!.id;
+    await probe.query("SELECT set_config('app.tenant_id', $1, true)", [env.MEMBER_TENANT_ID]);
     env.MEMBER_NAME = 'Smoke manager';
     env.MEMBER_ROLE = 'manager';
     env.MEMBER_EMAIL = `manager-${suffix}@test.invalid`;
@@ -63,10 +71,12 @@ try {
       'Bootstrap smoke passed: restricted grants, four published templates, admin and member.',
     );
   } finally {
+    await probe.query('ROLLBACK');
     await probe.end();
   }
 } finally {
   await control.query(`DROP DATABASE IF EXISTS ${database} WITH (FORCE)`);
   await control.query(`DROP ROLE IF EXISTS ${role}`);
+  await control.query(`DROP ROLE IF EXISTS ${migrator}`);
   await control.end();
 }

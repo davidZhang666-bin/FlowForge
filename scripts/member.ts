@@ -31,6 +31,7 @@ const db = new Database(process.env.DATABASE_ADMIN_URL);
 try {
   const passwordHash = await hashPassword(input.password);
   await db.client.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT set_config('app.tenant_id', ${input.tenantId}, true)`;
     const departments = await tx.department.findMany({
       where: {
         tenantId: input.tenantId,

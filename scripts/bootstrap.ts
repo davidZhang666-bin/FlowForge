@@ -29,6 +29,7 @@ try {
     if (await tx.user.findUnique({ where: { email: input.email } }))
       throw new Error('Admin email already exists; bootstrap never replaces existing accounts');
     const tenant = await tx.tenant.create({ data: { name: input.tenant } });
+    await tx.$queryRaw`SELECT set_config('app.tenant_id', ${tenant.id}, true)`;
     const department = await tx.department.create({
       data: { tenantId: tenant.id, name: '默认部门' },
     });
