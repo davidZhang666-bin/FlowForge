@@ -5,7 +5,7 @@ mkdirSync('docs', { recursive: true });
 writeFileSync(
   'docs/openapi.json',
   await format(JSON.stringify(openApiDocument()), {
-    ...(await resolveConfig('.')),
+    ...(await resolveConfig('docs/openapi.json')),
     parser: 'json',
   }),
 );
