@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, openSync, writeFileSync } from 'node:fs';
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, writeFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
 import { config } from 'dotenv';
@@ -39,9 +39,11 @@ try {
     windowsHide: true,
     stdio: ['ignore', log, log],
   });
+  closeSync(log);
   child.unref();
   let connected: pg.Client | undefined;
-  for (let attempt = 0; attempt < 150; attempt++) {
+  for (let attempt = 0; attempt < 400; attempt++) {
+    if (child.exitCode !== null) break;
     try {
       connected = await connect();
       break;
@@ -49,7 +51,12 @@ try {
       await new Promise((resolve) => setTimeout(resolve, 300));
     }
   }
-  if (!connected) throw new Error('Local PostgreSQL did not start; inspect .local/postgres.log');
+  if (!connected) {
+    let tail = readFileSync('.local/postgres.log', 'utf8').slice(-6000);
+    for (const secret of [process.env.DB_ADMIN_PASSWORD, process.env.DB_APP_PASSWORD])
+      if (secret) tail = tail.replaceAll(secret, '[redacted]');
+    throw new Error(`Local PostgreSQL did not start; recent database log:\n${tail}`);
+  }
   admin = connected;
 }
 const databaseName = new URL(url).pathname.slice(1);

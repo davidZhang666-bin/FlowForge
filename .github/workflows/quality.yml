@@ -68,6 +68,11 @@ jobs:
       - run: pnpm test:integration
       - run: pnpm db:stop
         if: always()
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: windows-postgres-log
+          path: .local/postgres.log
   containers:
     runs-on: ubuntu-latest
     timeout-minutes: 25
